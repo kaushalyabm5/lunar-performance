@@ -31,7 +31,15 @@ const AdminPage = () => {
   const [editingId, setEditingId] = useState(null);
 
   // Predefined categories
-  const categories = ["Superbike", "Naked Bike", "Sports Bike", "Hyperbike", "top-end Superbike"];
+  const categories = [
+    "Superbike",
+    "Naked Bike",
+    "Sports Bike",
+    "Hyperbike",
+    "top-end Superbike",
+    "Premium sportbike/superbike",
+    "Naked Sport",
+  ];
 
   // Fetch products
   const fetchProducts = async () => {
@@ -53,7 +61,10 @@ const AdminPage = () => {
       alert("Price must be a positive number");
       return false;
     }
-    if (form.year && (isNaN(form.year) || Number(form.year) < 1900 || Number(form.year) > 2100)) {
+    if (
+      form.year &&
+      (isNaN(form.year) || Number(form.year) < 1900 || Number(form.year) > 2100)
+    ) {
       alert("Year must be a valid number");
       return false;
     }
@@ -79,18 +90,25 @@ const AdminPage = () => {
   const handleSaveProduct = async () => {
     if (!validateForm()) return;
 
-    let finalImageUrl = imageUrl;
+    let finalImageUrl = "";
 
     try {
+      // 1. Use URL if provided
+      if (imageUrl) finalImageUrl = imageUrl;
+
+      // 2. Upload file if selected
       if (imageFile) {
         const uniqueName = `${Date.now()}_${imageFile.name}`;
         const imageRef = ref(storage, `products/${uniqueName}`);
         await uploadBytes(imageRef, imageFile);
-        finalImageUrl = await getDownloadURL(imageRef);
+        const uploadedUrl = await getDownloadURL(imageRef);
+
+        // Use uploaded image if URL is empty
+        if (!finalImageUrl) finalImageUrl = uploadedUrl;
       }
 
       if (!finalImageUrl) {
-        alert("Please provide an image");
+        alert("Please provide an image via URL or upload a file");
         return;
       }
 
@@ -110,7 +128,7 @@ const AdminPage = () => {
         await addDoc(collection(db, "products"), productData);
       }
 
-      // Reset form
+      // Reset form and file input
       setForm({
         name: "",
         price: "",
@@ -126,6 +144,7 @@ const AdminPage = () => {
       });
       setImageFile(null);
       setImageUrl("");
+      document.querySelector('input[type="file"]').value = "";
       fetchProducts();
     } catch (err) {
       console.error(err);
@@ -149,6 +168,7 @@ const AdminPage = () => {
       acceleration: p.acceleration || "",
     });
     setImageUrl(p.imageUrl || "");
+    setImageFile(null);
   };
 
   const handleDelete = async (id) => {
@@ -179,7 +199,11 @@ const AdminPage = () => {
                 title="Categories"
                 value={[...new Set(products.map((p) => p.category))].length}
               />
-              <Stat title="Editing Mode" value={editingId ? "Active" : "Inactive"} highlight />
+              <Stat
+                title="Editing Mode"
+                value={editingId ? "Active" : "Inactive"}
+                highlight
+              />
             </div>
 
             <section className="bg-neutral-900 border border-neutral-600 rounded-xl p-4 sm:p-6 lg:p-8">
@@ -218,7 +242,7 @@ const AdminPage = () => {
                 />
 
                 <input
-                  placeholder="Image URL"
+                  placeholder="Image URL (optional)"
                   value={imageUrl}
                   onChange={(e) => setImageUrl(e.target.value)}
                   className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-2 sm:col-span-2 xl:col-span-3"
@@ -255,18 +279,33 @@ const AdminPage = () => {
                 </thead>
                 <tbody>
                   {products.map((p) => (
-                    <tr key={p.id} className="border-t border-neutral-800 hover:bg-[#0b0f1a]">
+                    <tr
+                      key={p.id}
+                      className="border-t border-neutral-800 hover:bg-[#0b0f1a]"
+                    >
                       <td className="p-4 flex items-center gap-3">
-                        <img src={p.imageUrl} alt={p.name} className="w-12 h-8 rounded object-cover" />
+                        <img
+                          src={p.imageUrl}
+                          alt={p.name}
+                          className="w-12 h-8 rounded object-cover"
+                        />
                         {p.name}
                       </td>
                       <td className="p-4 text-center">{p.category}</td>
-                      <td className="p-4 text-center text-green-400">$. {p.price.toLocaleString()}</td>
+                      <td className="p-4 text-center text-green-400">
+                        $. {p.price.toLocaleString()}
+                      </td>
                       <td className="p-4 text-right space-x-2">
-                        <button onClick={() => handleEdit(p)} className="px-3 py-1 bg-yellow-600 rounded">
+                        <button
+                          onClick={() => handleEdit(p)}
+                          className="px-3 py-1 bg-yellow-600 rounded"
+                        >
                           Edit
                         </button>
-                        <button onClick={() => handleDelete(p.id)} className="px-3 py-1 bg-red-600 rounded">
+                        <button
+                          onClick={() => handleDelete(p.id)}
+                          className="px-3 py-1 bg-red-600 rounded"
+                        >
                           Delete
                         </button>
                       </td>
